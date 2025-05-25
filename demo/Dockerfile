@@ -1,11 +1,22 @@
-# Dùng JDK 17 để chạy ứng dụng Spring Boot
-FROM openjdk:21-jdk-slim
+# Build stage: build project bằng Maven
+FROM maven:3.8.7-openjdk-21 AS build
 
-# Thư mục làm việc bên trong container
 WORKDIR /app
 
-# Sao chép file jar từ local vào container
-COPY target/*.jar app.jar
+# Copy pom.xml và source code vào
+COPY pom.xml .
+COPY src ./src
 
-# Chạy ứng dụng
+# Build project, skip test để nhanh (nếu muốn test thì bỏ -DskipTests)
+RUN mvn clean package -DskipTests
+
+# Final stage: chỉ dùng JDK để chạy
+FROM openjdk:21-jdk-slim
+
+WORKDIR /app
+
+# Copy file jar từ stage build sang
+COPY --from=build /app/target/*.jar app.jar
+
+# Chạy app
 ENTRYPOINT ["java", "-jar", "app.jar"]
